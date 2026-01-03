@@ -45,9 +45,10 @@ fun main() = application {
     var j by remember { mutableStateOf(50000.0) }
     var t by remember { mutableStateOf(10.0) }
     var aS by remember { mutableStateOf(0.1) }
+    var dS by remember { mutableStateOf(100.0) }
 
     fun getRadius(pegel: Double): Double {
-        return (0.0124583 * ((j * aF * aS * t) / (r.squared() * pegel)).sqrt()).also { println(it) }
+        return (0.0124583 * ((j * aF * aS * t) / (r.squared() * pegel)).sqrt())
     }
 
     MaterialTheme(colorScheme) {
@@ -67,7 +68,7 @@ fun main() = application {
                             DoubleInput(t, double { t = it }, "Einwirkungszeit", 0f..100f) { "${it.roundTo(1)}s" }
                             DoubleInput(j, double { j = it }, "Intensität", 10000f..100000f) { "${it.toInt()}W/m²" }
                             DoubleInput(aF, double { aF = it }, "Fläche Feuer", 0.1f..100f) { "${it.roundTo(1)}m²" }
-//                            DoubleInput(dS, double { dS = it }, "Abstand der Sensoren", 10f..1000f) { "${it.toInt()}m" }
+                            DoubleInput(dS, double { dS = it }, "Abstand der Sensoren", 10f..1000f) { "${it.toInt()}m" }
                             DoubleInput(aS, double { aS = it }, "Fläche Sensor", 0.1f..1f) { "${it.roundTo(1)}m²" }
                         }
                         TextField(
@@ -106,17 +107,17 @@ fun main() = application {
                             }
                     ) {
                         val points = sensors.map {
-                            Circle(it.rx, it.ry, getRadius(it.pegel)).also { circle ->
-                                it.relative(center)
+                            val visualCenter = it.getVisualPosition(center)
+                            drawCircle(color = colorScheme.primary, radius = 10f, center = visualCenter)
+                            drawCircle(
+                                color = colorScheme.secondary,
+                                radius = r.toFloat(),
+                                center = visualCenter,
+                                style = Stroke(width = 1.dp.toPx())
+                            )
 
-                                drawCircle(color = colorScheme.primary, radius = 10f, center = it.pos)
-                                drawCircle(
-                                    color = colorScheme.secondary,
-                                    radius = circle.r.toFloat(),
-                                    center = it.pos,
-                                    style = Stroke(width = 1.dp.toPx())
-                                )
-                            }
+                            val realCenter = it.getRealPosition(dS.toFloat())
+                            Circle(realCenter.x.toDouble(), realCenter.y.toDouble(), getRadius(it.pegel))
                         }
 
                         var p = Point(points.map { it.cx }.average(), points.map { it.cy }.average())
@@ -159,12 +160,14 @@ suspend fun AwaitPointerEventScope.handleInput(
     pressed: (Sensor?) -> Unit
 ) {
     while (true) {
-        val change = awaitPointerEvent().changes[0]
+        val click = awaitPointerEvent().changes[0]
 
-        val sensor = sensors.minBy { dist(change.position, it.pos) }
-        val hover = (if (dist(change.position, sensor.pos) <= 25) sensor else null)
+        val sensor = sensors.minBy { dist(click.position, it.lastVisualPosition) }
 
-        if (change.pressed) pressed(hover)
+        println("Hover at ${click.position}, closest sensor at ${sensor.lastVisualPosition}")
+        val hover = (if (dist(click.position, sensor.lastVisualPosition) <= 25) sensor else null)
+
+        if (click.pressed) pressed(hover)
     }
 }
 
@@ -194,16 +197,13 @@ fun DoubleInput(
 
 const val r = 0.005
 
-class Sensor(x: Int, y: Int) {
-    val rx = x.toDouble() * 150f
-    val ry = y.toDouble() * 150f
+class Sensor(val x: Int, val y: Int) {
     var pegel = 0.05
 
-    var pos: Offset = Offset(0f, 0f)
+    var lastVisualPosition: Offset = Offset.Zero
 
-    fun relative(center: Offset) {
-        pos = center + Offset(rx.toFloat(), ry.toFloat())
-    }
+    fun getRealPosition(dS: Float): Offset = Offset(x * dS, y * dS)
+    fun getVisualPosition(center: Offset): Offset = center + Offset(x * 150f, y * 150f).also { lastVisualPosition = it }
 }
 
 fun Double.sqrt(): Double = pow(0.5)
