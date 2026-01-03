@@ -203,7 +203,9 @@ class Sensor(val x: Int, val y: Int) {
     var lastVisualPosition: Offset = Offset.Zero
 
     fun getRealPosition(dS: Float): Offset = Offset(x * dS, y * dS)
-    fun getVisualPosition(center: Offset): Offset = center + Offset(x * 150f, y * 150f).also { lastVisualPosition = it }
+    fun getVisualPosition(center: Offset): Offset {
+        return (center + Offset(x * 150f, y * 150f)).also { lastVisualPosition = it }
+    }
 }
 
 fun Double.sqrt(): Double = pow(0.5)
