@@ -25,3 +25,4 @@ jobs:
         with:
           name: macos-dmg
           path: composeApp/build/compose/binaries/main/dmg/*.dmg
+          retention-days: 1
