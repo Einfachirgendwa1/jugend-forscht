@@ -1,4 +1,4 @@
-package org.example.project
+package org.einfachirgendwa1.jugendForscht
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background

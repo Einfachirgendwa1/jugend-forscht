@@ -33,12 +33,12 @@ kotlin {
 
 compose.desktop {
     application {
-        mainClass = "org.example.project.MainKt"
+        mainClass = "org.einfachirgendwa1.jugendForscht.MainKt"
 
         nativeDistributions {
             targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
-            packageName = "org.example.project"
-            packageVersion = "1.0.0"
+            packageName = "org.einfachirgendwa1.jugendForscht"
+            packageVersion = "1.0.2"
         }
     }
 }

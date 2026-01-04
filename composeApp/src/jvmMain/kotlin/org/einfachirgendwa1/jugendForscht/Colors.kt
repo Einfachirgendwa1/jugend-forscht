@@ -1,4 +1,4 @@
-package org.example.project
+package org.einfachirgendwa1.jugendForscht
 
 import androidx.compose.material3.ColorScheme
 import androidx.compose.ui.graphics.Color
