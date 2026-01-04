@@ -3,27 +3,19 @@ package org.example.project
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.Slider
 import androidx.compose.material.SliderDefaults
-import androidx.compose.material.TextField
-import androidx.compose.material.TextFieldDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.scale
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.pointer.AwaitPointerEventScope
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
-import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -44,10 +36,7 @@ fun main() = application {
         Sensor(-1, -1)
     )
 
-    val focusRequester = remember { FocusRequester() }
     val state = rememberWindowState(placement = WindowPlacement.Maximized)
-    var editedSensor by remember { mutableStateOf<Sensor?>(null) }
-    var editingInput by remember { mutableStateOf("") }
     var sensors by remember { mutableStateOf<List<Sensor>>(s) }
     var aF by remember { mutableStateOf(0.5) }
     var j by remember { mutableStateOf(50000.0) }
@@ -83,25 +72,6 @@ fun main() = application {
                             DoubleInput(aS, double { aS = it }, "Fläche Sensor", 0.1f..1f) { "${it.roundTo(1)}m²" }
                             DoubleInput(zoom, double { zoom = it }, "Zoom", minZoom..maxZoom) { "${it.roundTo(3)}px/m" }
                         }
-                        TextField(
-                            value = editingInput,
-                            onValueChange = { editingInput = it },
-                            singleLine = true,
-                            keyboardOptions = KeyboardOptions.Default.copy(imeAction = ImeAction.Done),
-                            keyboardActions = KeyboardActions(onDone = {
-                                editingInput.toDoubleOrNull()?.let { editedSensor?.pegel = it }
-                                editedSensor = null
-                            }),
-                            colors = TextFieldDefaults.textFieldColors(
-                                textColor = colorScheme.onSurface,
-                                backgroundColor = colorScheme.surface
-                            ),
-                            modifier = Modifier
-                                .width(300.dp)
-                                .padding(0.dp, 20.dp)
-                                .focusRequester(focusRequester)
-                                .alpha(if (editedSensor == null) 0f else 1f)
-                        )
                     }
                     val textMeasurer = rememberTextMeasurer()
                     Canvas(
@@ -111,11 +81,9 @@ fun main() = application {
                             .background(colorScheme.background)
                             .pointerInput(null) {
                                 awaitPointerEventScope {
-                                    handleInput(sensors, {
-                                        editedSensor = it
-                                        editingInput = ""
-                                        focusRequester.requestFocus()
-                                    }) { zoom = (zoom * it).coerceIn(minZoom.toDouble(), maxZoom.toDouble()) }
+                                    handleInput {
+                                        zoom = (zoom * it).coerceIn(minZoom.toDouble(), maxZoom.toDouble())
+                                    }
                                 }
                             }
                     ) {
@@ -131,7 +99,7 @@ fun main() = application {
                                 center = visualCenter,
                             )
 
-                            val text = "${it.pegel.roundTo(3)}m"
+                            val text = "${(it.pegel * 100).roundTo(2)}cm"
                             val textStyle = TextStyle(fontSize = 11.sp, color = colorScheme.onSurface)
                             val layout = textMeasurer.measure(text, textStyle)
                             val topLeft = visualCenter - Offset(layout.size.width / 2f, layout.size.height / 2f + 20)
@@ -145,7 +113,6 @@ fun main() = application {
                                 )
                             }
 
-                            println(position)
                             Circle(position, getRadius(it.pegel))
                         }
 
@@ -178,17 +145,23 @@ fun main() = application {
                         val center = p.projectOnScreen(zoom, center)
                         drawCircle(color = colorScheme.error, radius = 25f, center = center)
                     }
+                    Column(modifier = Modifier.background(colorScheme.surface)) {
+                        for (i in 0..3) {
+                            DoubleInput(
+                                sensors[i].pegel * 100,
+                                double { sensors[i].pegel = it / 100 },
+                                "Pegelstand Sensor ${i + 1}",
+                                0f..3f
+                            ) { "${(sensors[i].pegel * 100).roundTo(2)}cm" }
+                        }
+                    }
                 }
             }
         }
     }
 }
 
-suspend fun AwaitPointerEventScope.handleInput(
-    sensors: List<Sensor>,
-    pressed: (Sensor?) -> Unit,
-    multiplyZoom: (Double) -> Unit
-) {
+suspend fun AwaitPointerEventScope.handleInput(multiplyZoom: (Double) -> Unit) {
     while (true) {
         val mouse = awaitPointerEvent().changes[0]
 
@@ -197,11 +170,6 @@ suspend fun AwaitPointerEventScope.handleInput(
             scrollDelta > 0f -> multiplyZoom(1.1)
             scrollDelta < 0f -> multiplyZoom(0.9)
         }
-
-        val sensor = sensors.minBy { dist(mouse.position, it.visualCenter) }
-        val hover = (if (dist(mouse.position, sensor.visualCenter) <= 25) sensor else null)
-
-        if (mouse.pressed) pressed(hover)
     }
 }
 
@@ -214,7 +182,7 @@ fun DoubleInput(
     display: (Double) -> String
 ) {
     Column(modifier = Modifier.scale(0.9f)) {
-        Text(label, color = colorScheme.onBackground, modifier = Modifier.padding())
+        Text(label, color = colorScheme.onBackground)
         Text(display(v), color = colorScheme.onBackground)
         Slider(
             value = v.toFloat(),
@@ -234,7 +202,7 @@ const val minZoom = 0.001f
 const val maxZoom = 1f
 
 class Sensor(val x: Int, val y: Int) {
-    var pegel = 0.01
+    var pegel by mutableStateOf(0.01)
 
     var visualCenter: Offset = Offset.Zero
 
@@ -249,7 +217,6 @@ fun maxDistToCircles(p: Point, circles: List<Circle>): Double {
     return circles.maxOf { hypot(p.x - it.pos.x, p.y - it.pos.y) - it.r }
 }
 
-fun dist(a: Offset, b: Offset): Double = ((a.x - b.x).toDouble().squared() + (a.y - b.y).toDouble().squared()).sqrt()
 fun double(func: (Double) -> Unit): (Float) -> Unit = { func(it.toDouble()) }
 
 data class Circle(val pos: Point, val r: Double)
