@@ -28,7 +28,7 @@ import kotlin.math.absoluteValue
 import kotlin.math.pow
 
 @Composable
-fun Frontend(exitApplication: () -> Unit, sensors: List<Sensor>) {
+fun Frontend(sensors: List<Sensor>, exitApplication: () -> Unit) {
     val state = rememberWindowState(placement = WindowPlacement.Maximized)
     var aF by remember { mutableStateOf(0.5) }
     var j by remember { mutableStateOf(50000.0) }
@@ -81,16 +81,6 @@ fun Frontend(exitApplication: () -> Unit, sensors: List<Sensor>) {
                             },
                         onDraw = renderSensorsAndFire(sensors, dS, zoom, ::getRadius, textMeasurer)
                     )
-                    Column(modifier = Modifier.background(colorScheme.surface)) {
-                        for (i in 0..3) {
-                            DoubleInput(
-                                sensors[i].pegel * 100,
-                                double { sensors[i].pegel = it / 100 },
-                                "Pegelstand Sensor ${i + 1}",
-                                0f..3f
-                            ) { "${(sensors[i].pegel * 100).roundTo(2)}cm" }
-                        }
-                    }
                 }
             }
         }

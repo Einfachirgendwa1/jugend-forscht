@@ -20,6 +20,8 @@ kotlin {
             implementation(compose.components.uiToolingPreview)
             implementation(libs.androidx.lifecycle.viewmodelCompose)
             implementation(libs.androidx.lifecycle.runtimeCompose)
+            implementation("org.xerial:sqlite-jdbc:3.45.1.0")
+            implementation("org.slf4j:slf4j-simple:1.7.36")
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)

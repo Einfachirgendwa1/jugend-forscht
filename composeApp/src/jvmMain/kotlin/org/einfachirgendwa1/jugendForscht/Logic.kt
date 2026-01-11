@@ -10,7 +10,7 @@ import kotlin.math.round
 
 const val r = 0.005
 
-class Sensor(val x: Int, val y: Int) {
+class Sensor(val x: Int, val y: Int, val id: Int) {
     var pegel by mutableStateOf(0.01)
 
     var visualCenter: Offset = Offset.Zero
