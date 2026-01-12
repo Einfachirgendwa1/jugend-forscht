@@ -3,26 +3,29 @@ name: macOS Build
 on: workflow_dispatch
 
 jobs:
-  build:
-    runs-on: macos-latest
-    steps:
-      - uses: actions/checkout@v4
+    build:
+        runs-on: macos-latest
+        steps:
+            -   uses: actions/checkout@v4
 
-      - name: Setup JDK
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: 17
+            -   name: Setup JDK
+                uses: actions/setup-java@v4
+                with:
+                    distribution: temurin
+                    java-version: 17
 
-      - name: Make gradlew executable
-        run: chmod +x gradlew
+            -   name: Make gradlew executable
+                run: chmod +x gradlew
 
-      - name: Build mac app
-        run: ./gradlew packageDmg
+            -   name: Initialize submodules
+                run: git submodule update --init --recursive
 
-      - name: Upload DMG
-        uses: actions/upload-artifact@v4
-        with:
-          name: macos-dmg
-          path: composeApp/build/compose/binaries/main/dmg/*.dmg
-          retention-days: 1
+            -   name: Build mac app
+                run: ./gradlew packageDmg
+
+            -   name: Upload DMG
+                uses: actions/upload-artifact@v4
+                with:
+                    name: macos-dmg
+                    path: composeApp/build/compose/binaries/main/dmg/*.dmg
+                    retention-days: 1
