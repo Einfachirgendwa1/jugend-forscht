@@ -3,28 +3,55 @@ package org.einfachirgendwa1.jugendForscht
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
+import java.io.File
 import java.sql.DriverManager
 import java.sql.ResultSet
 
-// TODO: implement receiver path
-fun pathToReceiver(): String {
-    return "C:\\Users\\Think\\IdeaProjects\\JugendForscht\\jugend-forscht-receiver\\target\\release\\jugend-forscht-receiver.exe"
-}
+fun isWindows() = System.getProperty("os.name").lowercase().contains("windows")
 
-// TODO: implement database path
-fun pathToDb(): String {
-    return "C:\\Users\\Think\\IdeaProjects\\JugendForscht\\main.db"
-}
-
-suspend fun loadData(sensors: List<Sensor>) {
-    val receiverPath = pathToReceiver()
-    val dbPath = pathToDb()
-
-    val child = withContext(Dispatchers.IO) {
-        ProcessBuilder(receiverPath, dbPath, "--spoof", "--reset-data").inheritIO().start()
+fun appDir(): File {
+    val appDir = when {
+        isWindows() -> File(System.getenv("APPDATA"), "JugendForscht")
+        else -> File(System.getProperty("user.home"), "Library/Application Support/JugendForscht")
     }
 
-    val connection = DriverManager.getConnection("jdbc:sqlite:$dbPath")
+    if (!appDir.exists()) {
+        appDir.mkdirs()
+    }
+
+    return appDir
+}
+
+fun extractReceiver(): File {
+    val receiverName = "jugend-forscht-receiver${if (isWindows()) ".exe" else ""}"
+    val receiverFile = File(appDir(), receiverName)
+
+    if (!receiverFile.exists()) {
+        println("Extracting receiver to ${receiverFile.absolutePath} because it does not exist.")
+       
+        val inputStream = object {}.javaClass.getResourceAsStream("/$receiverName")
+            ?: throw IllegalStateException("Receiver binary not found in resources")
+
+        receiverFile.outputStream().use { outputStream ->
+            inputStream.copyTo(outputStream)
+        }
+
+        receiverFile.setExecutable(true)
+    }
+
+    return receiverFile
+}
+
+fun dB(): File = File(appDir(), "main.db")
+
+suspend fun loadData(sensors: List<Sensor>) {
+    val receiverPath = extractReceiver()
+
+    val child = withContext(Dispatchers.IO) {
+        ProcessBuilder(receiverPath.absolutePath, dB().absolutePath, "--spoof", "--reset-data").inheritIO().start()
+    }
+
+    val connection = DriverManager.getConnection("jdbc:sqlite:${dB()}")
     val statement = connection.createStatement()
     statement.execute("PRAGMA journal_mode=WAL")
     statement.execute(

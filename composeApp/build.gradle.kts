@@ -44,3 +44,29 @@ compose.desktop {
         }
     }
 }
+
+fun isWindows() = System.getProperty("os.name").lowercase().contains("windows")
+
+val receiverName = "jugend-forscht-receiver${if (isWindows()) ".exe" else ""}"
+val receiverFile = rootProject.file("jugend-forscht-receiver/target/release/$receiverName")!!
+val resourcesDir = "src/jvmMain/resources"
+
+val buildReceiver by tasks.registering(Exec::class) {
+    workingDir = rootProject.file("jugend-forscht-receiver")
+    commandLine("cargo", "build", "--release")
+    outputs.file(receiverFile)
+    outputs.upToDateWhen { false }
+}
+
+val generateReceiver by tasks.registering(Copy::class) {
+    dependsOn(buildReceiver)
+
+    from(receiverFile)
+    into(resourcesDir)
+
+    outputs.file(File(resourcesDir, receiverName))
+}
+
+tasks.named("jvmProcessResources") {
+    dependsOn(generateReceiver)
+}
